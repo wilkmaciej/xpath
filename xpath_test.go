@@ -587,6 +587,26 @@ func (n *TNode) getAttribute(key string) string {
 	return ""
 }
 
+func createElement(line int, name string, children ...*TNode) *TNode {
+	nodeType := ElementNode
+	if name == "" {
+		nodeType = RootNode
+	}
+	n := createNode(name, nodeType)
+	n.lines = line
+	for _, c := range children {
+		c.Parent = n
+		c.PrevSibling = n.LastChild
+		if c.PrevSibling == nil {
+			n.FirstChild = c
+		} else {
+			c.PrevSibling.NextSibling = c
+		}
+		n.LastChild = c
+	}
+	return n
+}
+
 func createBookExample() *TNode {
 	/*
 	   <?xml version="1.0" encoding="UTF-8"?>

@@ -32,6 +32,39 @@ func Test_ancestor(t *testing.T) {
 	//test_xpath_elements(t, employee_example, `//ancestor::name`, 4, 9, 14)
 }
 
+func Test_ancestor_predicate(t *testing.T) {
+	doc := createElement(0, "",
+		createElement(1, "html",
+			createElement(2, "body",
+				createElement(3, "h1"),
+				createElement(4, "section",
+					createElement(5, "div",
+						createElement(6, "section",
+							createElement(7, "div",
+								createElement(8, "span"),
+							),
+						),
+					),
+				),
+				createElement(9, "section",
+					createElement(10, "div",
+						createElement(11, "section",
+							createElement(12, "div",
+								createElement(13, "span"),
+							),
+						),
+					),
+				),
+			),
+		),
+	)
+
+	test_xpath_elements(t, doc, `//span/ancestor::*`, 7, 6, 5, 4, 2, 1, 12, 11, 10, 9)
+	test_xpath_elements(t, doc, `//span/ancestor::section`, 6, 4, 11, 9)
+	test_xpath_elements(t, doc, `//span/ancestor::section[1]`, 6, 11)
+	test_xpath_elements(t, doc, `//span/ancestor::section[2]`, 4, 9)
+}
+
 func Test_ancestor_or_self(t *testing.T) {
 	// Expected the value is [2, 3, 8, 13], but got [3, 2, 8, 13]
 	test_xpath_elements(t, employee_example, `//employee/ancestor-or-self::*`, 3, 2, 8, 13)

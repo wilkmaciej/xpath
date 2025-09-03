@@ -528,57 +528,33 @@ func (p *parser) parsePrimaryExpr(n node) (opnd node) {
 		opnd = newVariableNode(p.r.prefix, p.r.name)
 		p.next()
 	case itemLParens:
-		// Try to parse a parenthesized comma-separated sequence of string literals.
-		// If that fails, fall back to simple parenthesized expression parsing.
-		saved := *p.r
+		// Support a parenthesized comma-separated sequence of any expressions.
 		p.next()
-		// Attempt a string literal list: ('a', 'b', ...)
-		var seq []node
-		if p.r.typ == itemString {
-			// collect first string
-			seq = append(seq, newOperandNode(p.r.strval))
-			p.next()
-			for p.r.typ == itemComma {
-				p.next()
-				if p.r.typ != itemString {
-					// not a string list, revert
-					seq = nil
+		first := p.parseExpression(n)
+		if p.r.typ == itemComma {
+			// Parse a sequence: (expr1, expr2, ...)
+			seq := []node{first}
+			for {
+				if p.r.typ != itemComma {
 					break
 				}
-				seq = append(seq, newOperandNode(p.r.strval))
 				p.next()
+				seq = append(seq, p.parseExpression(n))
 			}
-			if seq != nil {
-				// Expect closing ')'
-				if p.r.typ == itemRParens {
-					// Append a space to each string except the last to align with tests
-					for i := 0; i < len(seq)-1; i++ {
-						if on, ok := seq[i].(*operandNode); ok {
-							if s, ok2 := on.Val.(string); ok2 {
-								on.Val = s + " "
-							}
-						}
-					}
-					// Build as a union operator chain so downstream can reuse existing machinery
-					opnd = seq[0]
-					for i := 1; i < len(seq); i++ {
-						opnd = newOperatorNode("|", opnd, seq[i])
-					}
-					p.next()
-					return opnd
-				}
-				// No closing paren, revert
-				seq = nil
+			p.skipItem(itemRParens)
+			// Represent the sequence as a union operator chain to reuse existing query machinery
+			opnd = seq[0]
+			for i := 1; i < len(seq); i++ {
+				opnd = newOperatorNode("|", opnd, seq[i])
 			}
+		} else {
+			// Simple parenthesized expression
+			opnd = first
+			if opnd.Type() != nodeConstantOperand {
+				opnd = newGroupNode(opnd)
+			}
+			p.skipItem(itemRParens)
 		}
-		// Revert scanner and parse as a normal parenthesized expression
-		*p.r = saved
-		p.next()
-		opnd = p.parseExpression(n)
-		if opnd.Type() != nodeConstantOperand {
-			opnd = newGroupNode(opnd)
-		}
-		p.skipItem(itemRParens)
 	case itemName:
 		if p.r.canBeFunc && !isNodeType(p.r) {
 			opnd = p.parseMethod(nil)

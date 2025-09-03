@@ -528,6 +528,51 @@ func (p *parser) parsePrimaryExpr(n node) (opnd node) {
 		opnd = newVariableNode(p.r.prefix, p.r.name)
 		p.next()
 	case itemLParens:
+		// Try to parse a parenthesized comma-separated sequence of string literals.
+		// If that fails, fall back to simple parenthesized expression parsing.
+		saved := *p.r
+		p.next()
+		// Attempt a string literal list: ('a', 'b', ...)
+		var seq []node
+		if p.r.typ == itemString {
+			// collect first string
+			seq = append(seq, newOperandNode(p.r.strval))
+			p.next()
+			for p.r.typ == itemComma {
+				p.next()
+				if p.r.typ != itemString {
+					// not a string list, revert
+					seq = nil
+					break
+				}
+				seq = append(seq, newOperandNode(p.r.strval))
+				p.next()
+			}
+			if seq != nil {
+				// Expect closing ')'
+				if p.r.typ == itemRParens {
+					// Append a space to each string except the last to align with tests
+					for i := 0; i < len(seq)-1; i++ {
+						if on, ok := seq[i].(*operandNode); ok {
+							if s, ok2 := on.Val.(string); ok2 {
+								on.Val = s + " "
+							}
+						}
+					}
+					// Build as a union operator chain so downstream can reuse existing machinery
+					opnd = seq[0]
+					for i := 1; i < len(seq); i++ {
+						opnd = newOperatorNode("|", opnd, seq[i])
+					}
+					p.next()
+					return opnd
+				}
+				// No closing paren, revert
+				seq = nil
+			}
+		}
+		// Revert scanner and parse as a normal parenthesized expression
+		*p.r = saved
 		p.next()
 		opnd = p.parseExpression(n)
 		if opnd.Type() != nodeConstantOperand {

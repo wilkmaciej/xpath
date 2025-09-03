@@ -685,13 +685,32 @@ func stringJoinFunc(q, arg1 query) func(query, iterator) interface{} {
 		q = functionArgs(q)
 		test := predicate(q)
 		var parts []string
-		switch v := q.Evaluate(t).(type) {
-		case string:
-			return v
-		case query:
-			for node := v.Select(t); node != nil; node = v.Select(t) {
-				if test(node) {
-					parts = append(parts, node.Value())
+
+		// Try to gather a sequence of constant strings represented as a union of constants.
+		var gatherConstants func(query) bool
+		gatherConstants = func(in query) bool {
+			switch n := in.(type) {
+			case *constantQuery:
+				parts = append(parts, asString(t, n.Evaluate(t)))
+				return true
+			case *groupQuery:
+				return gatherConstants(n.Input)
+			case *unionQuery:
+				return gatherConstants(n.Left) && gatherConstants(n.Right)
+			default:
+				return false
+			}
+		}
+
+		if !gatherConstants(q) {
+			switch v := q.Evaluate(t).(type) {
+			case string:
+				return v
+			case query:
+				for node := v.Select(t); node != nil; node = v.Select(t) {
+					if test(node) {
+						parts = append(parts, node.Value())
+					}
 				}
 			}
 		}

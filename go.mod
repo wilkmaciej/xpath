@@ -1,3 +1,3 @@
-module github.com/wilkamciej/xpath
+module github.com/wilkmaciej/xpath
 
 go 1.14

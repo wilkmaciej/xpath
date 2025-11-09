@@ -201,6 +201,8 @@ func (a *ancestorQuery) Select(t iterator) NodeNavigator {
 func (a *ancestorQuery) Evaluate(t iterator) interface{} {
 	a.Input.Evaluate(t)
 	a.iterator = nil
+	// Reset the table when re-evaluating to ensure clean state
+	a.table = nil
 	return a
 }
 
@@ -829,6 +831,8 @@ func (f *filterQuery) Select(t iterator) NodeNavigator {
 
 func (f *filterQuery) Evaluate(t iterator) interface{} {
 	f.Input.Evaluate(t)
+	// Reset the position map when re-evaluating to ensure clean state
+	f.positmap = nil
 	return f
 }
 

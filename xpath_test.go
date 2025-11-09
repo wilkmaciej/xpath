@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -41,10 +42,14 @@ func (t testQuery) Properties() queryProp {
 
 func test_xpath_elements(t *testing.T, root *TNode, expr string, expected ...int) {
 	result := selectNodes(root, expr)
-	assertEqual(t, len(expected), len(result))
 
-	for i := 0; i < len(expected); i++ {
-		assertEqual(t, expected[i], result[i].lines)
+	var gotLines []int
+	for i := 0; i < len(result); i++ {
+		gotLines = append(gotLines, result[i].lines)
+	}
+
+	if !reflect.DeepEqual(gotLines, expected) {
+		t.Fatalf("expected lines %+v, got %+v", expected, gotLines)
 	}
 }
 
@@ -585,6 +590,14 @@ func (n *TNode) getAttribute(key string) string {
 		}
 	}
 	return ""
+}
+
+func createElementAttr(line int, name string, attrs map[string]string, children ...*TNode) *TNode {
+	el := createElement(line, name, children...)
+	for k, v := range attrs {
+		el.addAttribute(k, v)
+	}
+	return el
 }
 
 func createElement(line int, name string, children ...*TNode) *TNode {

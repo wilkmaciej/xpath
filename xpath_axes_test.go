@@ -65,6 +65,28 @@ func Test_ancestor_predicate(t *testing.T) {
 	test_xpath_elements(t, doc, `//span/ancestor::section[2]`, 4, 9)
 }
 
+func Test_ancestor_predicate_chain(t *testing.T) {
+	doc := createElement(0, "",
+		createElement(1, "html",
+			createElementAttr(2, "body", map[string]string{"itemscope": "", "itemtype": "Article"},
+				createElement(3, "section",
+					createElementAttr(4, "span", map[string]string{"itemprop": "author"}),
+					createElementAttr(5, "div", map[string]string{"itemscope": "", "itemtype": "Comment"},
+						createElementAttr(6, "span", map[string]string{"itemprop": "author"}),
+						createElement(7, "div",
+							createElementAttr(8, "span", map[string]string{"itemprop": "author"}),
+						),
+					),
+				),
+			),
+		),
+	)
+
+	// Find elements marked as "author" property whose closest "itemscope" ancestor is of "Comment" type.
+	// This should find "span" elements on lines 6 and 8, but not line 4 since that one is under "Article".
+	test_xpath_elements(t, doc, `//*[@itemprop="author"][ancestor::*[@itemscope][1][@itemtype="Comment"]]`, 6, 8)
+}
+
 func Test_ancestor_or_self(t *testing.T) {
 	// Expected the value is [2, 3, 8, 13], but got [3, 2, 8, 13]
 	test_xpath_elements(t, employee_example, `//employee/ancestor-or-self::*`, 3, 2, 8, 13)

@@ -689,14 +689,53 @@ func stringJoinFunc(q, arg1 query) func(query, iterator) interface{} {
 		case string:
 			return v
 		case query:
-			for node := v.Select(t); node != nil; node = v.Select(t) {
-				if test(node) {
-					parts = append(parts, node.Value())
+			// Handle sequences (unionQuery) that may contain string literals
+			if uq, ok := v.(*unionQuery); ok {
+				// Collect all values from the union query
+				parts = collectUnionValues(uq, t, test)
+			} else {
+				// Handle regular node-set queries
+				for node := v.Select(t); node != nil; node = v.Select(t) {
+					if test(node) {
+						parts = append(parts, node.Value())
+					}
 				}
 			}
 		}
 		return strings.Join(parts, separator)
 	}
+}
+
+// collectUnionValues recursively collects string values from a unionQuery
+func collectUnionValues(uq *unionQuery, t iterator, test func(NodeNavigator) bool) []string {
+	var parts []string
+
+	// Helper function to collect values from a query
+	var collectFromQuery func(q query)
+	collectFromQuery = func(q query) {
+		switch v := q.Evaluate(t).(type) {
+		case string:
+			parts = append(parts, v)
+		case query:
+			if nested, ok := v.(*unionQuery); ok {
+				// Recursively handle nested unions
+				collectFromQuery(nested.Left)
+				collectFromQuery(nested.Right)
+			} else {
+				// Try to select nodes
+				for node := v.Select(t); node != nil; node = v.Select(t) {
+					if test(node) {
+						parts = append(parts, node.Value())
+					}
+				}
+			}
+		}
+	}
+
+	collectFromQuery(uq.Left)
+	collectFromQuery(uq.Right)
+
+	return parts
 }
 
 // lower-case is XPATH function that converts a string to lower case.

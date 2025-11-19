@@ -114,9 +114,10 @@ func Test_func_string_empty(t *testing.T) {
 }
 
 func Test_func_string_join(t *testing.T) {
-	//(t, empty_example, `string-join(('Now', 'is', 'the', 'time', '...'), '')`, "Now is the time ...")
+	test_xpath_eval(t, empty_example, `string-join(('Now', 'is', 'the', 'time', '...'), ' ')`, "Now is the time ...")
 	test_xpath_eval(t, empty_example, `string-join("some text", ";")`, "some text")
 	test_xpath_eval(t, book_example, `string-join(//book/@category, ";")`, "cooking;children;web;web")
+	test_xpath_eval(t, book_example.FirstChild, `string-join((//book/title, //book/author), "-")`, "Everyday Italian-Harry Potter-XQuery Kick Start-Learning XML-Giada De Laurentiis-J K. Rowling-James McGovern-Per Bothner-Kurt Cagle-James Linn-Vaidyanathan Nagarajan-Erik T. Ray")
 }
 
 func Test_func_string_length(t *testing.T) {

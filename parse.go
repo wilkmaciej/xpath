@@ -530,6 +530,15 @@ func (p *parser) parsePrimaryExpr(n node) (opnd node) {
 	case itemLParens:
 		p.next()
 		opnd = p.parseExpression(n)
+		// Check if this is a sequence (comma-separated values)
+		if p.r.typ == itemComma {
+			// Parse remaining items in the sequence
+			for p.r.typ == itemComma {
+				p.next()
+				opnd2 := p.parseExpression(n)
+				opnd = newOperatorNode("|", opnd, opnd2)
+			}
+		}
 		if opnd.Type() != nodeConstantOperand {
 			opnd = newGroupNode(opnd)
 		}
